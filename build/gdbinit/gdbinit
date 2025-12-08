@@ -1,0 +1,2 @@
+source /home/juan/esp/campo_iot-projecto/build/gdbinit/symbols
+source /home/juan/esp/campo_iot-projecto/build/gdbinit/connect

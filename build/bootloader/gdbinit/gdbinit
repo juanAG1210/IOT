@@ -1,0 +1,2 @@
+source /home/juan/esp/campo_iot-projecto/build/bootloader/gdbinit/symbols
+source /home/juan/esp/campo_iot-projecto/build/bootloader/gdbinit/connect
