@@ -1,7 +1,7 @@
 {
     "version":            "1.2",
     "project_name":       "campo_iot-projecto",
-    "project_version":    "1",
+    "project_version":    "7401704-dirty",
     "project_path":       "/home/juan/esp/campo_iot-projecto",
     "idf_path":           "/home/juan/esp/v5.4.2/esp-idf",
     "build_dir":          "/home/juan/esp/campo_iot-projecto/build",
@@ -1195,7 +1195,7 @@
             "managed_reqs": [],
             "managed_priv_reqs": [],
             "file": "/home/juan/esp/campo_iot-projecto/build/esp-idf/main/libmain.a",
-            "sources": [ "/home/juan/esp/campo_iot-projecto/main/hello_world_main.c" ],
+            "sources": [ "/home/juan/esp/campo_iot-projecto/main/campo_iot_main.c" ],
             "include_dirs": [ "." ]
         },
         "mbedtls": {
