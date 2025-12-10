@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor IOTAGRO Pro</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        
+        header { background: linear-gradient(135deg, #1b5e20 0%, #4caf50 100%); color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+        .header-info h1 { margin: 0; font-size: 24px; }
+        .status { font-size: 14px; opacity: 0.9; margin-top: 5px; }
+
+        /* Estilo del Selector */
+        select { padding: 10px; border-radius: 5px; border: none; font-size: 14px; color: #333; cursor: pointer; }
+
+        .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; }
+        .card h3 { margin: 0 0 10px 0; color: #666; font-size: 16px; text-transform: uppercase; }
+        .card .value { font-size: 42px; font-weight: bold; color: #333; }
+        .card .unit { font-size: 16px; color: #888; }
+        
+        .clima-seco { color: #ff9800; }
+        .clima-lluvia { color: #2196f3; }
+        .humedad-ok { color: #4caf50; }
+        .humedad-bajo { color: #f44336; }
+
+        .chart-container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="header-info">
+            <h1>🌱 IOTAGRO Dashboard</h1>
+            <div class="status">Monitor Multidispositivo</div>
+        </div>
+        
+        <div>
+            <select id="deviceSelect" onchange="cambiarDispositivo()">
+                <option value="">-- Ver Todos (Resumen) --</option>
+                <option value="ESP32_37E8D0">Sector 1 (Mi ESP32)</option>
+                <option value="ESP32_FANTASMA">Sector 2 (Futuro)</option>
+            </select>
+        </div>
+    </header>
+
+    <div class="cards">
+        <div class="card">
+            <h3>Humedad del Suelo</h3>
+            <div id="humedad-val" class="value">--</div>
+            <span class="unit">%</span>
+        </div>
+        <div class="card">
+            <h3>Luz Ambiental</h3>
+            <div id="luz-val" class="value">--</div>
+            <span class="unit">Raw</span>
+        </div>
+        <div class="card">
+            <h3>Clima Actual</h3>
+            <div id="clima-val" class="value">--</div>
+            <span class="unit" id="clima-icon">☁️</span>
+        </div>
+    </div>
+
+    <div class="chart-container">
+        <canvas id="miGrafica"></canvas>
+    </div>
+</div>
+
+<script>
+    // 👇 PEGA TU URL DE LAMBDA AQUÍ OTRA VEZ
+    const BASE_URL = "URL LAMBDA"; 
+    
+    let myChart;
+
+    async function cargarDatos() {
+        // Obtenemos el ID del selector
+        const selector = document.getElementById('deviceSelect');
+        const dispositivoID = selector.value;
+
+        // Construimos la URL: Si hay ID, lo agregamos como ?id=...
+        let url_final = BASE_URL;
+        if (dispositivoID) {
+            url_final = BASE_URL + "?id=" + dispositivoID;
+        }
+
+        try {
+            console.log("Consultando:", url_final); // Para depurar
+            const response = await fetch(url_final);
+            const data = await response.json();
+
+            if(data.length > 0) {
+                actualizarTarjetas(data[0]); 
+                actualizarGrafica(data);
+            } else {
+                // Si no hay datos (ej: Sector 2 futuro)
+                alert("No hay datos para este dispositivo aún.");
+            }
+        } catch (error) {
+            console.error("Error:", error);
+        }
+    }
+
+    function cambiarDispositivo() {
+        // Cuando cambias el select, recargamos manual
+        cargarDatos();
+    }
+
+    function actualizarTarjetas(dato) {
+        const humVal = document.getElementById('humedad-val');
+        humVal.innerText = dato.humedad;
+        humVal.className = "value " + (dato.humedad < 30 ? "humedad-bajo" : "humedad-ok");
+        document.getElementById('luz-val').innerText = dato.luz_raw;
+        
+        const climaVal = document.getElementById('clima-val');
+        const climaIcon = document.getElementById('clima-icon');
+        climaVal.innerText = dato.clima;
+        
+        if (dato.clima === "Lluvia") {
+            climaVal.className = "value clima-lluvia";
+            climaIcon.innerText = "🌧️";
+        } else {
+            climaVal.className = "value clima-seco";
+            climaIcon.innerText = "☀️";
+        }
+    }
+
+    function actualizarGrafica(data) {
+        const historial = data.reverse(); 
+        const etiquetas = historial.map(d => {
+            const date = new Date(d.fecha_hora); 
+            return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        });
+        const valores = historial.map(d => d.humedad);
+
+        if (myChart) {
+            myChart.data.labels = etiquetas;
+            myChart.data.datasets[0].data = valores;
+            myChart.update();
+        } else {
+            const ctx = document.getElementById('miGrafica').getContext('2d');
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: etiquetas,
+                    datasets: [{
+                        label: 'Humedad (%)',
+                        data: valores,
+                        borderColor: '#4caf50',
+                        backgroundColor: 'rgba(76, 175, 80, 0.2)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: { responsive: true, scales: { y: { beginAtZero: true, max: 100 } } }
+            });
+        }
+    }
+
+    // Iniciar
+    cargarDatos();
+    setInterval(cargarDatos, 30000); 
+
+</script>
+</body>
+</html>
